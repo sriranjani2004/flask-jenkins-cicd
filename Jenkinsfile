@@ -4,9 +4,6 @@ pipeline {
         IMAGE_NAME = "sriranjani2809/flask-jenkins-docker"
         CONTAINER_NAME = "flask-app"
     }
-    tools {
-        docker 'Docker'
-    }
     stages {
         stage('Clone Repository') {
             steps {
@@ -18,12 +15,8 @@ pipeline {
                 sh '''
                     set -e
                     if ! command -v docker &> /dev/null; then
-                        echo "Docker not found, trying to update PATH..."
-                        export PATH=$PATH:/usr/local/bin
-                        if ! command -v docker &> /dev/null; then
-                            echo "Docker still not found. Please install Docker."
-                            exit 1
-                        fi
+                        echo "Docker not found. Ensure Docker is installed and accessible."
+                        exit 1
                     fi
                     docker --version
                 '''
