@@ -4,10 +4,29 @@ pipeline {
         IMAGE_NAME = "sriranjani2809/flask-jenkins-docker"
         CONTAINER_NAME = "flask-app"
     }
+    tools {
+        docker 'Docker'
+    }
     stages {
         stage('Clone Repository') {
             steps {
                 git branch: 'main', url: 'https://github.com/sriranjani2004/flask-jenkins-cicd'
+            }
+        }
+        stage('Ensure Docker is Available') {
+            steps {
+                sh '''
+                    set -e
+                    if ! command -v docker &> /dev/null; then
+                        echo "Docker not found, trying to update PATH..."
+                        export PATH=$PATH:/usr/local/bin
+                        if ! command -v docker &> /dev/null; then
+                            echo "Docker still not found. Please install Docker."
+                            exit 1
+                        fi
+                    fi
+                    docker --version
+                '''
             }
         }
         stage('Build Docker Image') {
@@ -19,7 +38,10 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', 
                     usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
+                    sh '''
+                        set -e
+                        echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin
+                    '''
                 }
             }
         }
@@ -30,15 +52,21 @@ pipeline {
         }
         stage('Run Docker Container') {
             steps {
-                sh "docker stop ${CONTAINER_NAME} || true"
-                sh "docker rm ${CONTAINER_NAME} || true"
-                sh "docker run -d -p 5055:5055 --name ${CONTAINER_NAME} ${IMAGE_NAME}:latest"
+                sh '''
+                    set -e
+                    docker stop ${CONTAINER_NAME} || true
+                    docker rm ${CONTAINER_NAME} || true
+                    docker run -d -p 5055:5055 --name ${CONTAINER_NAME} ${IMAGE_NAME}:latest
+                '''
             }
         }
         stage('Clean Up') {
             steps {
-                sh "docker image prune -f"
-                sh "docker container prune -f"
+                sh '''
+                    set -e
+                    docker image prune -f
+                    docker container prune -f
+                '''
             }
         }
     }
